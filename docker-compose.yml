@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DATABASE_URL=postgresql://postgres.xglksnyjugeqjgscchvh:9zugwKpIxB9p6onY@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true
+      - DIRECT_URL=postgresql://postgres.xglksnyjugeqjgscchvh:9zugwKpIxB9p6onY@aws-1-ap-southeast-2.pooler.supabase.com:5432/postgres
+      - JWT_SECRET=supersecretjwtkeyforfincore
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: always

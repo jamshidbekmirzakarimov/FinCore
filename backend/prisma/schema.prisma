@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id])
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  auditLogs AuditLog[]
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // Admin, Branch Manager, Loan Officer, Teller, Compliance Officer
+  description String?
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  address   String
+  city      String
+  country   String
+  phone     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  customers Customer[]
+}
+
+model Customer {
+  id              String   @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String   @unique
+  phone           String
+  dateOfBirth     DateTime
+  passportNumber  String   @unique
+  address         String
+  city            String
+  country         String
+  kycStatus       String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  branchId        String
+  branch          Branch   @relation(fields: [branchId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  accounts        Account[]
+  loans           Loan[]
+}
+
+model Account {
+  id            String   @id @default(uuid())
+  accountNumber String   @unique
+  type          String   // CHECKING, SAVINGS
+  balance       Float    @default(0)
+  currency      String   @default("USD")
+  status        String   @default("ACTIVE") // ACTIVE, FROZEN, CLOSED
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  transactionsFrom Transaction[] @relation("FromAccount")
+  transactionsTo   Transaction[] @relation("ToAccount")
+}
+
+model Loan {
+  id             String   @id @default(uuid())
+  loanNumber     String   @unique
+  amount         Float
+  interestRate   Float
+  termMonths     Int
+  status         String   @default("PENDING") // PENDING, UNDER_REVIEW, APPROVED, REJECTED, ACTIVE, PAID
+  purpose        String
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Transaction {
+  id              String   @id @default(uuid())
+  referenceNumber String   @unique
+  amount          Float
+  type            String   // DEPOSIT, WITHDRAWAL, TRANSFER
+  status          String   @default("COMPLETED") // PENDING, COMPLETED, FAILED, REVERTED
+  description     String?
+  
+  fromAccountId   String?
+  fromAccount     Account? @relation("FromAccount", fields: [fromAccountId], references: [id])
+  
+  toAccountId     String?
+  toAccount       Account? @relation("ToAccount", fields: [toAccountId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model ComplianceReport {
+  id          String   @id @default(uuid())
+  title       String
+  type        String   // SUSPICIOUS_ACTIVITY, RISK_ALERT, REGULATORY
+  status      String   @default("OPEN") // OPEN, INVESTIGATING, RESOLVED
+  description String
+  severity    String   // LOW, MEDIUM, HIGH, CRITICAL
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
